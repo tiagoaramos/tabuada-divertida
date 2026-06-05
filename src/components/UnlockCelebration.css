@@ -1,0 +1,123 @@
+/* UnlockCelebration modal styles */
+
+.unlock-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.unlock-modal {
+  background: white;
+  border-radius: 24px;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  max-width: 360px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.unlock-trophy {
+  font-size: 4.5rem;
+  line-height: 1;
+  margin-bottom: 0.75rem;
+  animation: bounce 1s ease infinite, sparkle 2s ease-in-out infinite;
+  display: inline-block;
+}
+
+.unlock-heading {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f59e0b;
+  margin: 0.5rem 0;
+}
+
+.unlock-message {
+  font-size: 1.2rem;
+  color: #4b5563;
+  margin: 0.5rem 0 1.5rem;
+}
+
+.unlock-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  padding: 0.875rem 2.5rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 48px;
+  min-height: 48px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.unlock-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+}
+
+.unlock-btn:focus-visible {
+  outline: 3px solid #667eea;
+  outline-offset: 3px;
+}
+
+/* Animations */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    filter: brightness(1) drop-shadow(0 0 0 transparent);
+  }
+  50% {
+    filter: brightness(1.2) drop-shadow(0 0 8px rgba(245, 158, 11, 0.6));
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .unlock-modal {
+    background: #1f2028;
+  }
+
+  .unlock-heading {
+    color: #fbbf24;
+  }
+
+  .unlock-message {
+    color: #9ca3af;
+  }
+}

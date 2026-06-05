@@ -1,0 +1,96 @@
+.feedback-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  z-index: 10;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.feedback-correct {
+  background: rgba(72, 199, 142, 0.95);
+  animation: fadeIn 0.3s ease-out, celebrationGlow 1s ease-in-out infinite alternate;
+}
+
+.feedback-incorrect {
+  background: rgba(255, 183, 77, 0.95);
+}
+
+.feedback-stars {
+  font-size: 3rem;
+  animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+.feedback-message {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  margin-top: 0.5rem;
+  animation: scaleIn 0.4s ease-out 0.2s both;
+}
+
+.feedback-encourage {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #5d4037;
+  margin-bottom: 0.75rem;
+  animation: scaleIn 0.4s ease-out;
+}
+
+.feedback-correct-answer {
+  font-size: 1.3rem;
+  color: #4e342e;
+  animation: scaleIn 0.4s ease-out 0.2s both;
+}
+
+.answer-highlight {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #d84315;
+  display: inline-block;
+  animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55) 0.3s both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes celebrationGlow {
+  from {
+    box-shadow: 0 0 20px rgba(72, 199, 142, 0.4);
+  }
+  to {
+    box-shadow: 0 0 40px rgba(72, 199, 142, 0.8), 0 0 60px rgba(255, 215, 0, 0.3);
+  }
+}
