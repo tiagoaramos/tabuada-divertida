@@ -1,0 +1,37 @@
+.multiple-choice-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.multiple-choice-btn {
+  min-width: 48px;
+  min-height: 48px;
+  padding: 16px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  border: 2px solid #4a90d9;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.multiple-choice-btn:hover:not(:disabled) {
+  background: #e8f2fc;
+  transform: scale(1.03);
+}
+
+.multiple-choice-btn:active:not(:disabled) {
+  background: #cce3f9;
+  transform: scale(0.97);
+}
+
+.multiple-choice-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

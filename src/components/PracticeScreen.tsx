@@ -1,11 +1,15 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useProgress } from "../context/ProgressContext";
 import { evaluateAnswer } from "../domain/evaluation";
 import { createResponseTimeRecord, saveResponseTimeRecord } from "../domain/response-times";
+import { getCategory } from "../domain/category-registry";
+import { generateDistractors } from "../domain/distractor-generator";
+import { shuffleArray } from "../domain/questions";
 import { useSessionTimer } from "../hooks/useSessionTimer";
 import type { FeedbackState } from "../types";
 import { QuestionDisplay } from "./QuestionDisplay";
 import { AnswerInput } from "./AnswerInput";
+import { MultipleChoiceInput } from "./MultipleChoiceInput";
 import { FeedbackOverlay } from "./FeedbackOverlay";
 import { SessionTimer } from "./SessionTimer";
 
@@ -14,11 +18,13 @@ interface PracticeScreenProps {
 }
 
 export function PracticeScreen({ tableNumber }: PracticeScreenProps) {
-  const { session, submitAnswer, advanceSession } = useProgress();
+  const { session, submitAnswer, advanceSession, categoryId, questionTypeId } = useProgress();
   const [feedbackState, setFeedbackState] = useState<FeedbackState>({ type: "none" });
   const [questionKey, setQuestionKey] = useState(0);
   const startTimeRef = useRef<number>(0);
   const sessionTime = useSessionTimer();
+
+  const category = getCategory(categoryId);
 
   // Advance session to load the first question on mount
   useEffect(() => {
@@ -31,6 +37,16 @@ export function PracticeScreen({ tableNumber }: PracticeScreenProps) {
     session && session.currentIndex > 0
       ? session.questions[session.currentIndex - 1]
       : null;
+
+  // Generate and cache shuffled options for multiple-choice (once per question)
+  const multipleChoiceOptions = useMemo(() => {
+    if (questionTypeId !== "multiple-choice" || !currentQuestion || !category) {
+      return [];
+    }
+    const distractors = generateDistractors(currentQuestion, category);
+    const options = [currentQuestion.correctAnswer, ...distractors];
+    return shuffleArray(options);
+  }, [currentQuestion, category, questionTypeId]);
 
   // Start timer when a new question is displayed
   useEffect(() => {
@@ -74,19 +90,29 @@ export function PracticeScreen({ tableNumber }: PracticeScreenProps) {
     );
   }
 
+  const categoryLabel = category?.label ?? "Tabuada";
+
   return (
     <div className="screen practice-screen">
-      <h2>Tabuada do {tableNumber} ✏️</h2>
+      <h2>{categoryLabel} do {tableNumber} ✏️</h2>
 
       <SessionTimer display={sessionTime} />
 
-      <QuestionDisplay question={currentQuestion} />
+      <QuestionDisplay question={currentQuestion} operator={category?.operator} />
 
-      {feedbackState.type === "none" && (
+      {questionTypeId === "open" && feedbackState.type === "none" && (
         <AnswerInput
           onSubmit={handleAnswer}
           disabled={false}
           questionKey={questionKey}
+        />
+      )}
+
+      {questionTypeId === "multiple-choice" && (
+        <MultipleChoiceInput
+          options={multipleChoiceOptions}
+          onSelect={handleAnswer}
+          disabled={feedbackState.type !== "none"}
         />
       )}
 

@@ -5,11 +5,15 @@ import { UnlockCelebration } from "./UnlockCelebration";
 // Mock useProgress
 const mockDismissCelebration = vi.fn();
 let mockUnlockCelebration: number | null = null;
+let mockCategoryId = "multiplication";
+let mockQuestionTypeId = "open";
 
 vi.mock("../context/ProgressContext", () => ({
   useProgress: () => ({
     unlockCelebration: mockUnlockCelebration,
     dismissCelebration: mockDismissCelebration,
+    categoryId: mockCategoryId,
+    questionTypeId: mockQuestionTypeId,
   }),
 }));
 
@@ -17,6 +21,8 @@ describe("UnlockCelebration", () => {
   beforeEach(() => {
     mockDismissCelebration.mockClear();
     mockUnlockCelebration = null;
+    mockCategoryId = "multiplication";
+    mockQuestionTypeId = "open";
   });
 
   it("renders nothing when unlockCelebration is null", () => {
@@ -25,15 +31,30 @@ describe("UnlockCelebration", () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it("renders the modal when a table is unlocked", () => {
+  it("renders the modal with category and question type when a table is unlocked", () => {
     mockUnlockCelebration = 5;
+    mockCategoryId = "multiplication";
+    mockQuestionTypeId = "open";
     render(<UnlockCelebration />);
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("Parabéns!")).toBeInTheDocument();
-    expect(screen.getByText("Você desbloqueou a tabuada do 5!")).toBeInTheDocument();
+    expect(
+      screen.getByText("Você desbloqueou a tabuada do 5 em Multiplicação - Questão Aberta!")
+    ).toBeInTheDocument();
     expect(screen.getByText("🏆")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Continuar" })).toBeInTheDocument();
+  });
+
+  it("displays addition category label correctly", () => {
+    mockUnlockCelebration = 3;
+    mockCategoryId = "addition";
+    mockQuestionTypeId = "multiple-choice";
+    render(<UnlockCelebration />);
+
+    expect(
+      screen.getByText("Você desbloqueou a tabuada do 3 em Soma - Múltipla Escolha!")
+    ).toBeInTheDocument();
   });
 
   it("calls dismissCelebration when the continue button is clicked", () => {
@@ -63,8 +84,12 @@ describe("UnlockCelebration", () => {
 
   it("displays the correct table number in the message", () => {
     mockUnlockCelebration = 10;
+    mockCategoryId = "multiplication";
+    mockQuestionTypeId = "open";
     render(<UnlockCelebration />);
 
-    expect(screen.getByText("Você desbloqueou a tabuada do 10!")).toBeInTheDocument();
+    expect(
+      screen.getByText("Você desbloqueou a tabuada do 10 em Multiplicação - Questão Aberta!")
+    ).toBeInTheDocument();
   });
 });

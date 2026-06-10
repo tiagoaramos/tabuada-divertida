@@ -1,10 +1,12 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
-import type { Progress, PracticeSession, RandomPracticeSession, Screen, Question, TableStats, Student } from "../types";
-import { loadProgress, saveProgress, loadStudents, saveStudents, loadActiveStudent, saveActiveStudent, generateStudentId, getDefaultProgress } from "../domain/persistence";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import type { Progress, PracticeSession, RandomPracticeSession, Screen, Question, TableStats, Student, QuestionTypeId } from "../types";
+import { loadProgress, saveProgress, loadStudents, saveStudents, loadActiveStudent, saveActiveStudent, generateStudentId, getDefaultProgress, migrateProgressIfNeeded } from "../domain/persistence";
 import { evaluateAnswer } from "../domain/evaluation";
 import { shouldUnlockNext, getNextTableToUnlock } from "../domain/unlock";
 import { generateSessionQuestions, getNextQuestion, generateRandomSessionQuestions, getNextRandomQuestion } from "../domain/questions";
 import { calculateMasteryLevel } from "../domain/stats";
+import { buildProgressKey, type ProgressKey } from "../domain/progress-key";
+import { getCategory, type CategoryDefinition } from "../domain/category-registry";
 
 interface ProgressContextValue {
   progress: Progress;
@@ -14,20 +16,29 @@ interface ProgressContextValue {
   unlockCelebration: number | null;
   currentStudent: Student | null;
   students: Student[];
+  categoryId: string;
+  questionTypeId: QuestionTypeId;
+  progressKey: ProgressKey;
   submitAnswer: (tableNumber: number, answer: number, question: Question, skipUnlock?: boolean) => void;
   startSession: (tableNumber: number) => void;
   startRandomSession: () => void;
   advanceSession: () => void;
-  advanceRandomSession: () => void;
+  advanceRandomSession: (category?: CategoryDefinition) => void;
   navigateTo: (screen: Screen) => void;
   dismissCelebration: () => void;
   selectStudent: (student: Student) => void;
   createStudent: (name: string) => void;
   deleteStudent: (studentId: string) => void;
   logout: () => void;
+  setCategoryId: (id: string) => void;
+  setQuestionTypeId: (id: QuestionTypeId) => void;
+  setProgressKey: (categoryId: string, questionTypeId: QuestionTypeId) => void;
 }
 
 const ProgressContext = createContext<ProgressContextValue | null>(null);
+
+const DEFAULT_CATEGORY_ID = "multiplication";
+const DEFAULT_QUESTION_TYPE_ID: QuestionTypeId = "open";
 
 export function ProgressProvider({ children }: { children: ReactNode }) {
   const [students, setStudents] = useState<Student[]>(() => loadStudents());
@@ -38,9 +49,18 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     return allStudents.find((s) => s.id === activeId) ?? null;
   });
 
+  const [categoryId, setCategoryIdState] = useState<string>(DEFAULT_CATEGORY_ID);
+  const [questionTypeId, setQuestionTypeIdState] = useState<QuestionTypeId>(DEFAULT_QUESTION_TYPE_ID);
+
+  const currentProgressKey = buildProgressKey(categoryId, questionTypeId);
+
   const [progress, setProgress] = useState<Progress>(() => {
     const activeId = loadActiveStudent();
-    if (activeId) return loadProgress(activeId);
+    if (activeId) {
+      migrateProgressIfNeeded(activeId);
+      const key = buildProgressKey(DEFAULT_CATEGORY_ID, DEFAULT_QUESTION_TYPE_ID);
+      return loadProgress(activeId, key);
+    }
     return getDefaultProgress();
   });
 
@@ -51,21 +71,46 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
     if (activeId) {
       const allStudents = loadStudents();
       const found = allStudents.find((s) => s.id === activeId);
-      if (found) return { type: "selection" };
+      if (found) return { type: "category-select" };
     }
     return { type: "student-select" };
   });
   const [unlockCelebration, setUnlockCelebration] = useState<number | null>(null);
 
+  // Load progress when categoryId or questionTypeId changes
+  useEffect(() => {
+    const activeId = currentStudent?.id;
+    if (activeId) {
+      const key = buildProgressKey(categoryId, questionTypeId);
+      const loadedProgress = loadProgress(activeId, key);
+      setProgress(loadedProgress);
+    }
+  }, [categoryId, questionTypeId, currentStudent?.id]);
+
+  const setCategoryId = useCallback((id: string) => {
+    setCategoryIdState(id);
+  }, []);
+
+  const setQuestionTypeId = useCallback((id: QuestionTypeId) => {
+    setQuestionTypeIdState(id);
+  }, []);
+
+  const setProgressKeyFn = useCallback((newCategoryId: string, newQuestionTypeId: QuestionTypeId) => {
+    setCategoryIdState(newCategoryId);
+    setQuestionTypeIdState(newQuestionTypeId);
+  }, []);
+
   const selectStudent = useCallback((student: Student) => {
     setCurrentStudent(student);
     saveActiveStudent(student.id);
-    const studentProgress = loadProgress(student.id);
+    migrateProgressIfNeeded(student.id);
+    const key = buildProgressKey(categoryId, questionTypeId);
+    const studentProgress = loadProgress(student.id, key);
     setProgress(studentProgress);
-    setScreen({ type: "selection" });
+    setScreen({ type: "category-select" });
     setSession(null);
     setRandomSession(null);
-  }, []);
+  }, [categoryId, questionTypeId]);
 
   const createStudent = useCallback((name: string) => {
     const newStudent: Student = {
@@ -117,7 +162,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
             },
           };
           const activeId = loadActiveStudent();
-          saveProgress(updatedProgress, activeId ?? undefined);
+          if (activeId) {
+            saveProgress(updatedProgress, activeId, currentProgressKey);
+          } else {
+            saveProgress(updatedProgress);
+          }
           return updatedProgress;
         }
 
@@ -160,26 +209,32 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         };
 
         const activeId = loadActiveStudent();
-        saveProgress(updatedProgress, activeId ?? undefined);
+        if (activeId) {
+          saveProgress(updatedProgress, activeId, currentProgressKey);
+        } else {
+          saveProgress(updatedProgress);
+        }
         return updatedProgress;
       });
     },
-    []
+    [currentProgressKey]
   );
 
   const startSession = useCallback((tableNumber: number) => {
-    const questions = generateSessionQuestions(tableNumber);
+    const category = getCategory(categoryId);
+    const questions = generateSessionQuestions(tableNumber, category);
     setSession({
       tableNumber,
       questions,
       currentIndex: 0,
       feedbackState: { type: "none" },
     });
-    setScreen({ type: "practice", tableNumber });
-  }, []);
+    setScreen({ type: "practice", categoryId, questionTypeId, tableNumber });
+  }, [categoryId, questionTypeId]);
 
   const startRandomSession = useCallback(() => {
-    const questions = generateRandomSessionQuestions();
+    const category = getCategory(categoryId);
+    const questions = generateRandomSessionQuestions(category);
     setRandomSession({
       tableNumber: questions[0].factorA,
       questions,
@@ -187,8 +242,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
       feedbackState: { type: "none" },
       isRandom: true,
     });
-    setScreen({ type: "random-practice" });
-  }, []);
+    setScreen({ type: "random-practice", categoryId, questionTypeId });
+  }, [categoryId, questionTypeId]);
 
   const navigateTo = useCallback((newScreen: Screen) => {
     setScreen(newScreen);
@@ -201,18 +256,19 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const advanceSession = useCallback(() => {
+    const category = getCategory(categoryId);
     setSession((prev) => {
       if (!prev) return prev;
-      const result = getNextQuestion(prev);
+      const result = getNextQuestion(prev, category);
       if (!result) return prev;
       return result.updatedSession;
     });
-  }, []);
+  }, [categoryId]);
 
-  const advanceRandomSession = useCallback(() => {
+  const advanceRandomSession = useCallback((category?: CategoryDefinition) => {
     setRandomSession((prev) => {
       if (!prev) return prev;
-      const result = getNextRandomQuestion(prev);
+      const result = getNextRandomQuestion(prev, category);
       if (!result) return prev;
       return result.updatedSession;
     });
@@ -232,6 +288,9 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         unlockCelebration,
         currentStudent,
         students,
+        categoryId,
+        questionTypeId,
+        progressKey: currentProgressKey,
         submitAnswer,
         startSession,
         startRandomSession,
@@ -243,6 +302,9 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         createStudent,
         deleteStudent,
         logout,
+        setCategoryId,
+        setQuestionTypeId,
+        setProgressKey: setProgressKeyFn,
       }}
     >
       {children}

@@ -1,9 +1,12 @@
 // === Tipos de Domínio ===
 
+export type QuestionTypeId = "open" | "multiple-choice";
+
 export interface Question {
   factorA: number; // número da tabuada (2-10)
-  factorB: number; // multiplicador (1-10)
-  correctAnswer: number; // factorA * factorB
+  factorB: number; // operando (1-10)
+  correctAnswer: number; // category.compute(factorA, factorB)
+  categoryId?: string; // e.g., "addition", "multiplication"
 }
 
 export interface TableStats {
@@ -55,10 +58,14 @@ export interface Student {
 
 export type Screen =
   | { type: "student-select" }
-  | { type: "selection" }
-  | { type: "practice"; tableNumber: number }
-  | { type: "random-practice" }
-  | { type: "stats" };
+  | { type: "category-select" }
+  | { type: "question-type-select"; categoryId: string }
+  | { type: "table-selection"; categoryId: string; questionTypeId: QuestionTypeId }
+  | { type: "practice"; categoryId: string; questionTypeId: QuestionTypeId; tableNumber: number }
+  | { type: "random-practice"; categoryId: string; questionTypeId: QuestionTypeId }
+  | { type: "stats" }
+  // Legacy variants (kept for backward compatibility during migration)
+  | { type: "selection" };
 
 // === Tipos de Rastreamento de Tempo de Resposta ===
 

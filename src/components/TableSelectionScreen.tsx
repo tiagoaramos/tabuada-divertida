@@ -16,7 +16,7 @@ const TABLE_COLORS = [
 const TABLES = [2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export function TableSelectionScreen() {
-  const { progress, startSession, startRandomSession } = useProgress();
+  const { progress, categoryId, questionTypeId, startSession, startRandomSession } = useProgress();
 
   return (
     <div className="screen table-selection-screen">
@@ -30,7 +30,7 @@ export function TableSelectionScreen() {
       <button
         className="random-mode-btn"
         onClick={startRandomSession}
-        aria-label="Modo aleatório: praticar tabuadas misturadas"
+        aria-label={`Modo aleatório: praticar tabuadas misturadas (${categoryId}, ${questionTypeId})`}
       >
         <span className="random-mode-btn__emoji">🎲</span>
         <span className="random-mode-btn__text">Modo Aleatório</span>

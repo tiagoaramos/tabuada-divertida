@@ -1,7 +1,25 @@
 import type { Question, PracticeSession, RandomPracticeSession } from "../types";
+import type { CategoryDefinition } from "./category-registry";
+import { getCategory } from "./category-registry";
 
 /** Tables allowed in random mode (excludes 0, 1, 2, and 10) */
 const RANDOM_MODE_TABLES = [3, 4, 5, 6, 7, 8, 9];
+
+/** Default category (multiplication) for backward compatibility */
+function getDefaultCategory(): CategoryDefinition {
+  const cat = getCategory("multiplication");
+  if (!cat) {
+    // Fallback if registry not initialized (shouldn't happen in production)
+    return {
+      id: "multiplication",
+      label: "Multiplicação",
+      operator: "×",
+      icon: "multiplication",
+      compute: (a, b) => a * b,
+    };
+  }
+  return cat;
+}
 
 /**
  * Fisher-Yates shuffle algorithm.
@@ -19,13 +37,20 @@ export function shuffleArray<T>(array: T[]): T[] {
 /**
  * Generates a shuffled cycle of 10 questions for the given table number.
  * Each cycle contains exactly factors 1-10 in random order.
+ * Uses the category's compute function to calculate correct answers.
+ * Tags each question with the categoryId.
  */
-export function generateSessionQuestions(tableNumber: number): Question[] {
+export function generateSessionQuestions(
+  tableNumber: number,
+  category?: CategoryDefinition
+): Question[] {
+  const cat = category ?? getDefaultCategory();
   const factors = shuffleArray([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   return factors.map((b) => ({
     factorA: tableNumber,
     factorB: b,
-    correctAnswer: tableNumber * b,
+    correctAnswer: cat.compute(tableNumber, b),
+    categoryId: cat.id,
   }));
 }
 
@@ -35,9 +60,10 @@ export function generateSessionQuestions(tableNumber: number): Question[] {
  */
 function generateNonRepeatingCycle(
   tableNumber: number,
-  lastQuestion: Question
+  lastQuestion: Question,
+  category?: CategoryDefinition
 ): Question[] {
-  let questions = generateSessionQuestions(tableNumber);
+  let questions = generateSessionQuestions(tableNumber, category);
 
   // Keep regenerating until first question of new cycle differs from last of previous
   // In worst case, we swap the first element with another position
@@ -60,7 +86,8 @@ function generateNonRepeatingCycle(
  * Returns null only if session has no questions (should not happen in normal use).
  */
 export function getNextQuestion(
-  session: PracticeSession
+  session: PracticeSession,
+  category?: CategoryDefinition
 ): { question: Question; updatedSession: PracticeSession } | null {
   if (session.questions.length === 0) {
     return null;
@@ -82,7 +109,8 @@ export function getNextQuestion(
   const lastQuestion = session.questions[session.questions.length - 1];
   const newQuestions = generateNonRepeatingCycle(
     session.tableNumber,
-    lastQuestion
+    lastQuestion,
+    category
   );
 
   return {
@@ -100,9 +128,13 @@ export function getNextQuestion(
 /**
  * Generates a shuffled batch of random questions from tables 3-9.
  * Each batch picks 10 questions with random tables and random factors (1-10).
- * Avoids repeating the exact same question consecutively.
+ * Uses the category's compute function to calculate correct answers.
+ * Tags each question with the categoryId.
  */
-export function generateRandomSessionQuestions(): Question[] {
+export function generateRandomSessionQuestions(
+  category?: CategoryDefinition
+): Question[] {
+  const cat = category ?? getDefaultCategory();
   const questions: Question[] = [];
 
   for (let i = 0; i < 10; i++) {
@@ -112,7 +144,8 @@ export function generateRandomSessionQuestions(): Question[] {
     questions.push({
       factorA: table,
       factorB: factor,
-      correctAnswer: table * factor,
+      correctAnswer: cat.compute(table, factor),
+      categoryId: cat.id,
     });
   }
 
@@ -125,7 +158,8 @@ export function generateRandomSessionQuestions(): Question[] {
  * the same question appearing consecutively.
  */
 export function getNextRandomQuestion(
-  session: RandomPracticeSession
+  session: RandomPracticeSession,
+  category?: CategoryDefinition
 ): { question: Question; updatedSession: RandomPracticeSession } | null {
   if (session.questions.length === 0) {
     return null;
@@ -146,7 +180,7 @@ export function getNextRandomQuestion(
   }
 
   // Cycle exhausted: generate a new batch
-  let newQuestions = generateRandomSessionQuestions();
+  let newQuestions = generateRandomSessionQuestions(category);
   const lastQuestion = session.questions[session.questions.length - 1];
 
   // Avoid same question at the boundary

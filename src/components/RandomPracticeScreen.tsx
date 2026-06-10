@@ -1,25 +1,31 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useProgress } from "../context/ProgressContext";
 import { evaluateAnswer } from "../domain/evaluation";
+import { getCategory } from "../domain/category-registry";
+import { generateDistractors } from "../domain/distractor-generator";
+import { shuffleArray } from "../domain/questions";
 import { createResponseTimeRecord, saveResponseTimeRecord } from "../domain/response-times";
 import { useSessionTimer } from "../hooks/useSessionTimer";
 import type { FeedbackState } from "../types";
 import { QuestionDisplay } from "./QuestionDisplay";
 import { AnswerInput } from "./AnswerInput";
+import { MultipleChoiceInput } from "./MultipleChoiceInput";
 import { FeedbackOverlay } from "./FeedbackOverlay";
 import { SessionTimer } from "./SessionTimer";
 
 export function RandomPracticeScreen() {
-  const { randomSession, submitAnswer, advanceRandomSession } = useProgress();
+  const { randomSession, submitAnswer, advanceRandomSession, categoryId, questionTypeId } = useProgress();
   const [feedbackState, setFeedbackState] = useState<FeedbackState>({ type: "none" });
   const [questionKey, setQuestionKey] = useState(0);
   const startTimeRef = useRef<number>(0);
   const sessionTime = useSessionTimer();
 
+  const category = getCategory(categoryId);
+
   // Advance session to load the first question on mount
   useEffect(() => {
     if (randomSession && randomSession.currentIndex === 0) {
-      advanceRandomSession();
+      advanceRandomSession(category);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -27,6 +33,16 @@ export function RandomPracticeScreen() {
     randomSession && randomSession.currentIndex > 0
       ? randomSession.questions[randomSession.currentIndex - 1]
       : null;
+
+  // Generate and cache multiple-choice options per question
+  const multipleChoiceOptions = useMemo(() => {
+    if (questionTypeId !== "multiple-choice" || !currentQuestion || !category) {
+      return [];
+    }
+    const distractors = generateDistractors(currentQuestion, category);
+    const options = [currentQuestion.correctAnswer, ...distractors];
+    return shuffleArray(options);
+  }, [currentQuestion, questionTypeId, category]);
 
   // Start timer when a new question is displayed
   useEffect(() => {
@@ -36,10 +52,10 @@ export function RandomPracticeScreen() {
   }, [currentQuestion]);
 
   const handleFeedbackTimeout = useCallback(() => {
-    advanceRandomSession();
+    advanceRandomSession(category);
     setQuestionKey((k) => k + 1);
     setFeedbackState({ type: "none" });
-  }, [advanceRandomSession]);
+  }, [advanceRandomSession, category]);
 
   const handleAnswer = (answer: number) => {
     if (!currentQuestion || feedbackState.type !== "none") return;
@@ -75,13 +91,21 @@ export function RandomPracticeScreen() {
 
       <SessionTimer display={sessionTime} />
 
-      <QuestionDisplay question={currentQuestion} />
+      <QuestionDisplay question={currentQuestion} operator={category?.operator} />
 
-      {feedbackState.type === "none" && (
+      {questionTypeId === "open" && feedbackState.type === "none" && (
         <AnswerInput
           onSubmit={handleAnswer}
           disabled={false}
           questionKey={questionKey}
+        />
+      )}
+
+      {questionTypeId === "multiple-choice" && (
+        <MultipleChoiceInput
+          options={multipleChoiceOptions}
+          onSelect={handleAnswer}
+          disabled={feedbackState.type !== "none"}
         />
       )}
 

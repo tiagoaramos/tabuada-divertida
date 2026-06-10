@@ -1,10 +1,20 @@
 import { useEffect, useRef } from "react";
 import { useProgress } from "../context/ProgressContext";
+import { getCategory } from "../domain/category-registry";
 import "./UnlockCelebration.css";
 
+const questionTypeLabels: Record<string, string> = {
+  "open": "Questão Aberta",
+  "multiple-choice": "Múltipla Escolha",
+};
+
 export function UnlockCelebration() {
-  const { unlockCelebration, dismissCelebration } = useProgress();
+  const { unlockCelebration, dismissCelebration, categoryId, questionTypeId } = useProgress();
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const category = getCategory(categoryId);
+  const categoryLabel = category?.label ?? categoryId;
+  const questionTypeLabel = questionTypeLabels[questionTypeId] ?? questionTypeId;
 
   useEffect(() => {
     if (unlockCelebration !== null && buttonRef.current) {
@@ -42,7 +52,7 @@ export function UnlockCelebration() {
         </div>
         <h2 className="unlock-heading">Parabéns!</h2>
         <p className="unlock-message">
-          Você desbloqueou a tabuada do {unlockCelebration}!
+          Você desbloqueou a tabuada do {unlockCelebration} em {categoryLabel} - {questionTypeLabel}!
         </p>
         <button
           ref={buttonRef}

@@ -6,8 +6,8 @@ Transform the Math Trainer from a single-operation app into an extensible multi-
 
 ## Tasks
 
-- [ ] 1. Create domain foundations: Category Registry and Progress Key
-  - [ ] 1.1 Create `src/domain/category-registry.ts` with CategoryDefinition interface and registry
+- [x] 1. Create domain foundations: Category Registry and Progress Key
+  - [x] 1.1 Create `src/domain/category-registry.ts` with CategoryDefinition interface and registry
     - Define `CategoryDefinition` interface with id, label, operator, icon, compute fields
     - Implement registry Map, `registerCategory()`, `getCategory()`, `getAllCategories()`
     - Add validation: id format (lowercase alphanumeric + hyphens, max 32 chars), label max 50 chars, operator max 3 chars, non-empty fields
@@ -20,7 +20,7 @@ Transform the Math Trainer from a single-operation app into an extensible multi-
     - **Property 2: Duplicate and invalid category rejection**
     - **Validates: Requirements 1.1, 1.4, 1.5**
 
-  - [ ] 1.3 Create `src/domain/progress-key.ts` with ProgressKey type and utilities
+  - [x] 1.3 Create `src/domain/progress-key.ts` with ProgressKey type and utilities
     - Define `QuestionTypeId` type ("open" | "multiple-choice")
     - Define `ProgressKey` template literal type
     - Implement `buildProgressKey(categoryId, questionTypeId)` returning formatted string
@@ -32,8 +32,8 @@ Transform the Math Trainer from a single-operation app into an extensible multi-
     - **Property 13: Storage key construction**
     - **Validates: Requirements 14.3, 12.1**
 
-- [ ] 2. Create Distractor Generator
-  - [ ] 2.1 Create `src/domain/distractor-generator.ts`
+- [x] 2. Create Distractor Generator
+  - [x] 2.1 Create `src/domain/distractor-generator.ts`
     - Implement `generateDistractors(question, category)` returning exactly 3 distractor integers
     - Primary strategy: compute category.compute(factorA, factorB + offset) for offsets [-3,-2,-1,+1,+2,+3] with valid factorB in [1,10]
     - Filter: remove duplicates, remove correctAnswer, remove values < 1
@@ -45,8 +45,8 @@ Transform the Math Trainer from a single-operation app into an extensible multi-
     - **Property 8: Distractor generation validity**
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.6, 6.7**
 
-- [ ] 3. Update Question Generation for multi-category support
-  - [ ] 3.1 Modify `src/domain/questions.ts` to accept category parameter
+- [x] 3. Update Question Generation for multi-category support
+  - [x] 3.1 Modify `src/domain/questions.ts` to accept category parameter
     - Update `generateSessionQuestions(tableNumber, category)` to use `category.compute` instead of hardcoded multiplication
     - Tag each question with `categoryId` from the category definition
     - Update `generateRandomSessionQuestions(category)` to use category compute function
@@ -61,11 +61,11 @@ Transform the Math Trainer from a single-operation app into an extensible multi-
     - **Property 7: Random batch boundary non-repetition**
     - **Validates: Requirements 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 14.5**
 
-- [ ] 4. Checkpoint - Ensure all domain tests pass
+- [x] 4. Checkpoint - Ensure all domain tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 5. Update Persistence and Progress for Progress_Key support
-  - [ ] 5.1 Modify `src/domain/persistence.ts` to use Progress_Key-based storage
+- [x] 5. Update Persistence and Progress for Progress_Key support
+  - [x] 5.1 Modify `src/domain/persistence.ts` to use Progress_Key-based storage
     - Update `saveProgress(studentId, progressKey, progress)` to write to key pattern "math-trainer-progress-{studentId}-{categoryId}-{questionTypeId}"
     - Update `loadProgress(studentId, progressKey)` to read from the corresponding key
     - Add structural validation: version === 1, valid unlockedTables (integers 2-10), valid tableStats (non-negative integers, totalCorrect <= totalAnswered)
@@ -83,22 +83,22 @@ Transform the Math Trainer from a single-operation app into an extensible multi-
     - **Property 12: Unlock progression**
     - **Validates: Requirements 9.3, 4.3, 10.2, 10.3, 10.4, 10.7**
 
-- [ ] 6. Update Types and Navigation State
-  - [ ] 6.1 Update `src/types/index.ts` with new types and extended Screen union
+- [x] 6. Update Types and Navigation State
+  - [x] 6.1 Update `src/types/index.ts` with new types and extended Screen union
     - Add `QuestionTypeId` type export
     - Add `categoryId` field to `Question` interface
     - Extend `Screen` type with: "category-select", "question-type-select" (with categoryId), updated "table-selection", "practice", "random-practice" states to include categoryId and questionTypeId
     - _Requirements: 13.1, 9.1_
 
-  - [ ] 6.2 Update `src/context/ProgressContext.tsx` to manage Progress_Key state
+  - [x] 6.2 Update `src/context/ProgressContext.tsx` to manage Progress_Key state
     - Add active Progress_Key state (categoryId + questionTypeId)
     - Update `loadProgress` / `saveProgress` calls to use Progress_Key-based persistence
     - Provide methods to set active category and question type
     - Load progress independently per Progress_Key when switching
     - _Requirements: 9.1, 9.6, 13.5_
 
-- [ ] 7. Implement new navigation screens
-  - [ ] 7.1 Create `src/components/CategorySelectorScreen.tsx`
+- [x] 7. Implement new navigation screens
+  - [x] 7.1 Create `src/components/CategorySelectorScreen.tsx`
     - Render one selectable option per registry entry with label and icon
     - Use `getAllCategories()` from registry to iterate entries
     - Navigate to question-type-select screen on selection
@@ -106,21 +106,21 @@ Transform the Math Trainer from a single-operation app into an extensible multi-
     - Ensure minimum 48x48px tap targets
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.6, 14.2_
 
-  - [ ] 7.2 Create `src/components/QuestionTypeSelectorScreen.tsx`
+  - [x] 7.2 Create `src/components/QuestionTypeSelectorScreen.tsx`
     - Display category name and two options: "Questão Aberta" and "Múltipla Escolha"
     - Each option includes description (max 60 chars) and minimum 48x48px tap target
     - Navigate to table-selection with category + question type on selection
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-  - [ ] 7.3 Create `src/components/MultipleChoiceInput.tsx`
+  - [x] 7.3 Create `src/components/MultipleChoiceInput.tsx`
     - Render 4 shuffled option buttons (1 correct + 3 distractors)
     - Report selected value on tap
     - Minimum 48x48px tap targets
     - Disable during feedback display
     - _Requirements: 6.1, 6.4, 6.5, 6.8, 8.6_
 
-- [ ] 8. Modify existing screens for multi-category support
-  - [ ] 8.1 Update `src/components/TableSelectionScreen.tsx` for Progress_Key
+- [x] 8. Modify existing screens for multi-category support
+  - [x] 8.1 Update `src/components/TableSelectionScreen.tsx` for Progress_Key
     - Accept Progress_Key (category + question type) as context
     - Show lock/unlock state based on current Progress_Key's progress
     - Display mastery percentage per unlocked table for current Progress_Key
@@ -128,23 +128,23 @@ Transform the Math Trainer from a single-operation app into an extensible multi-
     - Include "Modo Aleatório" option for current Progress_Key
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-  - [ ] 8.2 Update `src/components/PracticeScreen.tsx` for multi-category and question types
+  - [x] 8.2 Update `src/components/PracticeScreen.tsx` for multi-category and question types
     - Render `AnswerInput` for open-answer or `MultipleChoiceInput` for multiple-choice based on active question type
     - Use category from registry for operator display and answer computation
     - Pass category to question generator
     - _Requirements: 6.1, 7.1, 7.4, 8.1, 8.2, 8.3, 8.4, 8.6_
 
-  - [ ] 8.3 Update `src/components/RandomPracticeScreen.tsx` for multi-category support
+  - [x] 8.3 Update `src/components/RandomPracticeScreen.tsx` for multi-category support
     - Same pattern as PracticeScreen: render appropriate input based on question type
     - Use category compute function for question generation
     - _Requirements: 4.5, 5.5, 5.6_
 
-  - [ ] 8.4 Update `src/components/QuestionDisplay.tsx` to use category operator
+  - [x] 8.4 Update `src/components/QuestionDisplay.tsx` to use category operator
     - Render operator symbol from category registry instead of hardcoded "×"
     - Display format: "{factorA} {operator} {factorB} = ?"
     - _Requirements: 7.4, 5.1_
 
-  - [ ] 8.5 Update `src/components/StatsScreen.tsx` for multi-category statistics
+  - [x] 8.5 Update `src/components/StatsScreen.tsx` for multi-category statistics
     - Organize by category → question type (4 sections at launch)
     - Show mastery, total answered, total correct per table per Progress_Key
     - Show overall totals per Progress_Key
@@ -152,15 +152,15 @@ Transform the Math Trainer from a single-operation app into an extensible multi-
     - Handle zero-state (0% mastery, 0 answered, 0 correct)
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
 
-  - [ ] 8.6 Update `src/components/UnlockCelebration.tsx` with category and question type info
+  - [x] 8.6 Update `src/components/UnlockCelebration.tsx` with category and question type info
     - Display category name + question type in celebration message
     - _Requirements: 10.5, 10.6_
 
-- [ ] 9. Checkpoint - Ensure all tests pass
+- [x] 9. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 10. Wire navigation flow and App integration
-  - [ ] 10.1 Update `src/App.tsx` with extended navigation and screen routing
+- [x] 10. Wire navigation flow and App integration
+  - [x] 10.1 Update `src/App.tsx` with extended navigation and screen routing
     - Add "category-select" and "question-type-select" screen states
     - Route: Student_Select → Category_Selector → QuestionType_Selector → Table_Selection → Practice
     - Implement back navigation at each level
@@ -168,7 +168,7 @@ Transform the Math Trainer from a single-operation app into an extensible multi-
     - Return to Table_Selection after practice session completes/exits
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7, 2.1, 2.5, 3.5_
 
-  - [ ] 10.2 Add data migration for existing multiplication progress
+  - [x] 10.2 Add data migration for existing multiplication progress
     - On first load, check for legacy key pattern "math-trainer-progress-{studentId}"
     - Map existing data to "math-trainer-progress-{studentId}-multiplication-open"
     - Remove legacy key after successful migration
@@ -180,7 +180,7 @@ Transform the Math Trainer from a single-operation app into an extensible multi-
     - Test data migration from legacy key to new Progress_Key pattern
     - _Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7_
 
-- [ ] 11. Final checkpoint - Ensure all tests pass
+- [x] 11. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes

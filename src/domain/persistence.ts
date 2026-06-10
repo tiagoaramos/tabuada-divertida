@@ -1,12 +1,13 @@
 import type { Progress, StoredProgress, TableStats, Student } from "../types";
 import { calculateMasteryLevel } from "./stats";
+import { buildProgressKey, getStorageKey, type ProgressKey } from "./progress-key";
 
 export const STORAGE_KEY = "math-trainer-progress";
 export const STUDENTS_KEY = "math-trainer-students";
 export const ACTIVE_STUDENT_KEY = "math-trainer-active-student";
 
 /**
- * Retorna a chave de storage para um aluno específico.
+ * Retorna a chave de storage para um aluno específico (legacy, sem Progress_Key).
  */
 export function getStudentStorageKey(studentId: string): string {
   return `${STORAGE_KEY}-${studentId}`;
@@ -65,9 +66,13 @@ export function generateStudentId(): string {
  * Salva o progresso no localStorage, convertendo Progress → StoredProgress.
  * Apenas totalAnswered e totalCorrect por tabuada são armazenados;
  * masteryLevel é recalculado ao carregar.
- * Se studentId for fornecido, salva no storage individual do aluno.
+ *
+ * Overloads:
+ * - saveProgress(progress, studentId, progressKey): salva no key pattern "math-trainer-progress-{studentId}-{categoryId}-{questionTypeId}"
+ * - saveProgress(progress, studentId): salva no storage individual do aluno (legacy)
+ * - saveProgress(progress): salva no storage global (legacy)
  */
-export function saveProgress(progress: Progress, studentId?: string): void {
+export function saveProgress(progress: Progress, studentId?: string, progressKey?: ProgressKey): void {
   const stored: StoredProgress = {
     version: 1,
     unlockedTables: progress.unlockedTables,
@@ -79,18 +84,46 @@ export function saveProgress(progress: Progress, studentId?: string): void {
     ),
     randomStats: progress.randomStats,
   };
-  const key = studentId ? getStudentStorageKey(studentId) : STORAGE_KEY;
-  localStorage.setItem(key, JSON.stringify(stored));
+
+  let key: string;
+  if (studentId && progressKey) {
+    key = getStorageKey(studentId, progressKey);
+  } else if (studentId) {
+    key = getStudentStorageKey(studentId);
+  } else {
+    key = STORAGE_KEY;
+  }
+
+  try {
+    localStorage.setItem(key, JSON.stringify(stored));
+  } catch {
+    // localStorage unavailable — continue with in-memory progress
+  }
 }
 
 /**
  * Carrega o progresso do localStorage.
  * Retorna o estado padrão se dados ausentes, corrompidos ou inválidos.
- * Se studentId for fornecido, carrega do storage individual do aluno.
+ *
+ * Overloads:
+ * - loadProgress(studentId, progressKey): carrega do key pattern "math-trainer-progress-{studentId}-{categoryId}-{questionTypeId}"
+ * - loadProgress(studentId): carrega do storage individual do aluno (legacy)
+ * - loadProgress(): carrega do storage global (legacy)
+ *
+ * Returns default progress on missing/invalid/unparseable data without affecting other keys.
+ * Handles localStorage unavailability gracefully (no unhandled exceptions).
  */
-export function loadProgress(studentId?: string): Progress {
+export function loadProgress(studentId?: string, progressKey?: ProgressKey): Progress {
   try {
-    const key = studentId ? getStudentStorageKey(studentId) : STORAGE_KEY;
+    let key: string;
+    if (studentId && progressKey) {
+      key = getStorageKey(studentId, progressKey);
+    } else if (studentId) {
+      key = getStudentStorageKey(studentId);
+    } else {
+      key = STORAGE_KEY;
+    }
+
     const raw = localStorage.getItem(key);
     if (!raw) return getDefaultProgress();
     const parsed = JSON.parse(raw) as StoredProgress;
@@ -192,4 +225,40 @@ export function reconstructProgress(stored: StoredProgress): Progress {
     totalCorrect,
     randomStats: stored.randomStats ?? { totalAnswered: 0, totalCorrect: 0 },
   };
+}
+
+/**
+ * Migrates legacy progress data to the new Progress_Key-based storage.
+ *
+ * On first load, checks for legacy key "math-trainer-progress-{studentId}".
+ * If found AND the new key "math-trainer-progress-{studentId}-multiplication-open"
+ * does NOT already exist, copies the data to the new key.
+ * Removes the legacy key after successful migration.
+ *
+ * This ensures existing multiplication open-answer progress is preserved
+ * when transitioning to the multi-category key pattern.
+ */
+export function migrateProgressIfNeeded(studentId: string): void {
+  try {
+    const legacyKey = getStudentStorageKey(studentId);
+    const legacyData = localStorage.getItem(legacyKey);
+
+    if (!legacyData) {
+      return; // No legacy data to migrate
+    }
+
+    const newProgressKey = buildProgressKey("multiplication", "open");
+    const newKey = getStorageKey(studentId, newProgressKey);
+    const existingNewData = localStorage.getItem(newKey);
+
+    if (!existingNewData) {
+      // Copy legacy data to new key
+      localStorage.setItem(newKey, legacyData);
+    }
+
+    // Remove the legacy key after migration (whether copy happened or not)
+    localStorage.removeItem(legacyKey);
+  } catch {
+    // Graceful error handling — if migration fails, do not break the app
+  }
 }

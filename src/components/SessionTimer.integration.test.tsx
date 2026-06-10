@@ -47,6 +47,8 @@ vi.mock("../context/ProgressContext", () => ({
     startRandomSession: vi.fn(),
     navigateTo: vi.fn(),
     dismissCelebration: vi.fn(),
+    categoryId: "multiplication",
+    questionTypeId: "open",
   }),
 }));
 

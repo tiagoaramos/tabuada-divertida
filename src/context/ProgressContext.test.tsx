@@ -2,7 +2,8 @@ import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { ProgressProvider, useProgress } from "./ProgressContext";
 import type { ReactNode } from "react";
-import { STUDENTS_KEY, ACTIVE_STUDENT_KEY, getStudentStorageKey } from "../domain/persistence";
+import { STUDENTS_KEY, ACTIVE_STUDENT_KEY } from "../domain/persistence";
+import { getStorageKey, buildProgressKey } from "../domain/progress-key";
 
 function wrapper({ children }: { children: ReactNode }) {
   return <ProgressProvider>{children}</ProgressProvider>;
@@ -51,7 +52,7 @@ describe("ProgressContext", () => {
         totalCorrect: 0,
         randomStats: { totalAnswered: 0, totalCorrect: 0 },
       });
-      expect(result.current.screen).toEqual({ type: "selection" });
+      expect(result.current.screen).toEqual({ type: "category-select" });
     });
 
     it("loads saved progress from localStorage for active student", () => {
@@ -63,7 +64,10 @@ describe("ProgressContext", () => {
           "2": { totalAnswered: 15, totalCorrect: 13 },
         },
       };
-      localStorage.setItem(getStudentStorageKey(studentId), JSON.stringify(stored));
+      // Progress is now loaded from the Progress_Key-based key (default: multiplication-open)
+      const defaultKey = buildProgressKey("multiplication", "open");
+      const storageKey = getStorageKey(studentId, defaultKey);
+      localStorage.setItem(storageKey, JSON.stringify(stored));
 
       const { result } = renderHook(() => useProgress(), { wrapper });
 
@@ -112,7 +116,10 @@ describe("ProgressContext", () => {
         result.current.submitAnswer(2, 10, question);
       });
 
-      const stored = JSON.parse(localStorage.getItem(getStudentStorageKey(studentId))!);
+      // Progress is now saved under the Progress_Key-based key (default: multiplication-open)
+      const defaultKey = buildProgressKey("multiplication", "open");
+      const storageKey = getStorageKey(studentId, defaultKey);
+      const stored = JSON.parse(localStorage.getItem(storageKey)!);
       expect(stored.version).toBe(1);
       expect(stored.tableStats["2"].totalAnswered).toBe(1);
       expect(stored.tableStats["2"].totalCorrect).toBe(1);
@@ -165,7 +172,7 @@ describe("ProgressContext", () => {
       expect(result.current.session!.questions).toHaveLength(10);
       expect(result.current.session!.currentIndex).toBe(0);
       expect(result.current.session!.feedbackState).toEqual({ type: "none" });
-      expect(result.current.screen).toEqual({ type: "practice", tableNumber: 5 });
+      expect(result.current.screen).toEqual({ type: "practice", categoryId: "multiplication", questionTypeId: "open", tableNumber: 5 });
     });
 
     it("generates questions with correct factorA", () => {
@@ -239,6 +246,140 @@ describe("ProgressContext", () => {
       expect(() => {
         renderHook(() => useProgress());
       }).toThrow("useProgress must be used within a ProgressProvider");
+    });
+  });
+
+  describe("Progress_Key state management", () => {
+    it("defaults categoryId to multiplication and questionTypeId to open", () => {
+      const { result } = renderHook(() => useProgress(), { wrapper });
+
+      expect(result.current.categoryId).toBe("multiplication");
+      expect(result.current.questionTypeId).toBe("open");
+      expect(result.current.progressKey).toBe("multiplication-open");
+    });
+
+    it("updates categoryId via setCategoryId", () => {
+      setupActiveStudent();
+      const { result } = renderHook(() => useProgress(), { wrapper });
+
+      act(() => {
+        result.current.setCategoryId("addition");
+      });
+
+      expect(result.current.categoryId).toBe("addition");
+      expect(result.current.progressKey).toBe("addition-open");
+    });
+
+    it("updates questionTypeId via setQuestionTypeId", () => {
+      setupActiveStudent();
+      const { result } = renderHook(() => useProgress(), { wrapper });
+
+      act(() => {
+        result.current.setQuestionTypeId("multiple-choice");
+      });
+
+      expect(result.current.questionTypeId).toBe("multiple-choice");
+      expect(result.current.progressKey).toBe("multiplication-multiple-choice");
+    });
+
+    it("updates both via setProgressKey", () => {
+      setupActiveStudent();
+      const { result } = renderHook(() => useProgress(), { wrapper });
+
+      act(() => {
+        result.current.setProgressKey("addition", "multiple-choice");
+      });
+
+      expect(result.current.categoryId).toBe("addition");
+      expect(result.current.questionTypeId).toBe("multiple-choice");
+      expect(result.current.progressKey).toBe("addition-multiple-choice");
+    });
+
+    it("loads independent progress when switching Progress_Key", () => {
+      const studentId = setupActiveStudent();
+
+      // Save progress for addition-open
+      const additionKey = buildProgressKey("addition", "open");
+      const additionStorageKey = getStorageKey(studentId, additionKey);
+      localStorage.setItem(additionStorageKey, JSON.stringify({
+        version: 1,
+        unlockedTables: [2, 3, 4],
+        tableStats: {
+          "2": { totalAnswered: 20, totalCorrect: 18 },
+          "3": { totalAnswered: 15, totalCorrect: 12 },
+        },
+      }));
+
+      // Save progress for multiplication-open (default)
+      const multiKey = buildProgressKey("multiplication", "open");
+      const multiStorageKey = getStorageKey(studentId, multiKey);
+      localStorage.setItem(multiStorageKey, JSON.stringify({
+        version: 1,
+        unlockedTables: [2, 3],
+        tableStats: {
+          "2": { totalAnswered: 10, totalCorrect: 8 },
+        },
+      }));
+
+      const { result } = renderHook(() => useProgress(), { wrapper });
+
+      // Default is multiplication-open
+      expect(result.current.progress.unlockedTables).toEqual([2, 3]);
+      expect(result.current.progress.tableStats[2].totalAnswered).toBe(10);
+
+      // Switch to addition-open
+      act(() => {
+        result.current.setCategoryId("addition");
+      });
+
+      expect(result.current.progress.unlockedTables).toEqual([2, 3, 4]);
+      expect(result.current.progress.tableStats[2].totalAnswered).toBe(20);
+      expect(result.current.progress.tableStats[3].totalAnswered).toBe(15);
+    });
+
+    it("returns default progress for a Progress_Key with no saved data", () => {
+      setupActiveStudent();
+      const { result } = renderHook(() => useProgress(), { wrapper });
+
+      act(() => {
+        result.current.setProgressKey("addition", "multiple-choice");
+      });
+
+      expect(result.current.progress).toEqual({
+        unlockedTables: [2],
+        tableStats: {},
+        totalAnswered: 0,
+        totalCorrect: 0,
+        randomStats: { totalAnswered: 0, totalCorrect: 0 },
+      });
+    });
+
+    it("saves progress to the correct Progress_Key", () => {
+      const studentId = setupActiveStudent();
+      const { result } = renderHook(() => useProgress(), { wrapper });
+
+      // Switch to addition-open
+      act(() => {
+        result.current.setCategoryId("addition");
+      });
+
+      const question = { factorA: 2, factorB: 3, correctAnswer: 5 };
+      act(() => {
+        result.current.submitAnswer(2, 5, question);
+      });
+
+      // Check it's saved under the addition-open key
+      const additionKey = buildProgressKey("addition", "open");
+      const storageKey = getStorageKey(studentId, additionKey);
+      const stored = JSON.parse(localStorage.getItem(storageKey)!);
+      expect(stored.version).toBe(1);
+      expect(stored.tableStats["2"].totalAnswered).toBe(1);
+      expect(stored.tableStats["2"].totalCorrect).toBe(1);
+
+      // Check multiplication-open is NOT affected
+      const multiKey = buildProgressKey("multiplication", "open");
+      const multiStorageKey = getStorageKey(studentId, multiKey);
+      expect(localStorage.getItem(multiStorageKey)).toBeNull();
     });
   });
 });
