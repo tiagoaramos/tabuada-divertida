@@ -1,7 +1,7 @@
 import { useProgress } from "../context/ProgressContext";
 
 export function Header() {
-  const { screen, navigateTo } = useProgress();
+  const { screen, navigateTo, currentStudent, logout } = useProgress();
 
   return (
     <header className="app-header">
@@ -20,6 +20,11 @@ export function Header() {
       <h1 className="header-title">🧮 Tabuada Divertida</h1>
 
       <div className="header-right">
+        {currentStudent && (
+          <span className="header-student-name">
+            👤 {currentStudent.name}
+          </span>
+        )}
         {screen.type !== "stats" && (
           <button
             className="header-btn"
@@ -29,6 +34,14 @@ export function Header() {
             📊
           </button>
         )}
+        <button
+          className="header-btn header-btn--logout"
+          onClick={logout}
+          aria-label="Trocar de aluno"
+          title="Trocar de aluno"
+        >
+          🔄
+        </button>
       </div>
     </header>
   );

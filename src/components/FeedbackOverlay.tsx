@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import "./FeedbackOverlay.css";
 
 interface FeedbackOverlayProps {
@@ -32,11 +32,14 @@ export function FeedbackOverlay({
   correctAnswer,
   onTimeout,
 }: FeedbackOverlayProps) {
+  const onTimeoutRef = useRef(onTimeout);
+  onTimeoutRef.current = onTimeout;
+
   useEffect(() => {
     const delay = type === "correct" ? 1500 : 3000;
-    const timer = setTimeout(onTimeout, delay);
+    const timer = setTimeout(() => onTimeoutRef.current(), delay);
     return () => clearTimeout(timer);
-  }, [type, onTimeout]);
+  }, [type]);
 
   if (type === "correct") {
     return (

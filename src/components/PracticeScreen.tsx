@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useProgress } from "../context/ProgressContext";
 import { evaluateAnswer } from "../domain/evaluation";
+import { createResponseTimeRecord, saveResponseTimeRecord } from "../domain/response-times";
+import { useSessionTimer } from "../hooks/useSessionTimer";
 import type { FeedbackState } from "../types";
 import { QuestionDisplay } from "./QuestionDisplay";
 import { AnswerInput } from "./AnswerInput";
 import { FeedbackOverlay } from "./FeedbackOverlay";
+import { SessionTimer } from "./SessionTimer";
 
 interface PracticeScreenProps {
   tableNumber: number;
@@ -14,6 +17,8 @@ export function PracticeScreen({ tableNumber }: PracticeScreenProps) {
   const { session, submitAnswer, advanceSession } = useProgress();
   const [feedbackState, setFeedbackState] = useState<FeedbackState>({ type: "none" });
   const [questionKey, setQuestionKey] = useState(0);
+  const startTimeRef = useRef<number>(0);
+  const sessionTime = useSessionTimer();
 
   // Advance session to load the first question on mount
   useEffect(() => {
@@ -27,16 +32,28 @@ export function PracticeScreen({ tableNumber }: PracticeScreenProps) {
       ? session.questions[session.currentIndex - 1]
       : null;
 
-  const handleFeedbackTimeout = () => {
+  // Start timer when a new question is displayed
+  useEffect(() => {
+    if (currentQuestion) {
+      startTimeRef.current = performance.now();
+    }
+  }, [currentQuestion]);
+
+  const handleFeedbackTimeout = useCallback(() => {
     advanceSession();
     setQuestionKey((k) => k + 1);
     setFeedbackState({ type: "none" });
-  };
+  }, [advanceSession]);
 
   const handleAnswer = (answer: number) => {
     if (!currentQuestion || feedbackState.type !== "none") return;
 
+    const elapsedMs = performance.now() - startTimeRef.current;
     const isCorrect = evaluateAnswer(currentQuestion, answer);
+
+    // Create and persist response time record
+    const record = createResponseTimeRecord(currentQuestion, elapsedMs, isCorrect);
+    saveResponseTimeRecord(record);
 
     // Submit answer to context (updates progress, persistence, unlock check)
     submitAnswer(tableNumber, answer, currentQuestion);
@@ -60,6 +77,8 @@ export function PracticeScreen({ tableNumber }: PracticeScreenProps) {
   return (
     <div className="screen practice-screen">
       <h2>Tabuada do {tableNumber} ✏️</h2>
+
+      <SessionTimer display={sessionTime} />
 
       <QuestionDisplay question={currentQuestion} />
 

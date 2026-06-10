@@ -43,13 +43,33 @@ export interface RandomPracticeSession {
   isRandom: true;
 }
 
+// === Tipos de Aluno ===
+
+export interface Student {
+  id: string;       // identificador único (gerado)
+  name: string;     // nome do aluno
+  createdAt: string; // ISO 8601
+}
+
 // === Tipos de Navegação ===
 
 export type Screen =
+  | { type: "student-select" }
   | { type: "selection" }
   | { type: "practice"; tableNumber: number }
   | { type: "random-practice" }
   | { type: "stats" };
+
+// === Tipos de Rastreamento de Tempo de Resposta ===
+
+export interface ResponseTimeRecord {
+  tableNumber: number;    // 2-10
+  factorA: number;        // primeiro fator da multiplicação
+  factorB: number;        // segundo fator da multiplicação
+  responseTimeMs: number; // tempo de resposta em milissegundos (inteiro >= 0)
+  isCorrect: boolean;     // se a resposta estava correta
+  timestamp: string;      // ISO 8601 string do momento da submissão
+}
 
 // === Tipos de Persistência ===
 

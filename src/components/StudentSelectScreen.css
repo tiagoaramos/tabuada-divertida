@@ -1,0 +1,271 @@
+/* === StudentSelectScreen === */
+
+.student-select-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 2rem;
+}
+
+.student-select-screen__title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-h);
+  margin: 0 0 0.5rem;
+}
+
+.student-select-screen__subtitle {
+  font-size: 1.1rem;
+  color: var(--text);
+  margin: 0 0 2rem;
+}
+
+.student-select-screen__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 1.5rem;
+}
+
+/* === Student Card === */
+
+.student-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  border-radius: 16px;
+  padding: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+
+.student-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transform: translateY(-1px);
+}
+
+.student-card__btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: none;
+  border: none;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-radius: 12px;
+  transition: background 0.2s;
+  font-family: inherit;
+}
+
+.student-card__btn:hover {
+  background: rgba(102, 126, 234, 0.06);
+}
+
+.student-card__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 1.4rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.student-card__name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-h);
+  text-align: left;
+}
+
+.student-card__delete {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: #ccc;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  min-width: 36px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background 0.2s;
+}
+
+.student-card__delete:hover {
+  color: #e53e3e;
+  background: rgba(229, 62, 62, 0.08);
+}
+
+.student-card__confirm-delete {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.student-card__confirm-yes,
+.student-card__confirm-no {
+  border: none;
+  border-radius: 8px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 36px;
+  min-height: 32px;
+}
+
+.student-card__confirm-yes {
+  background: #fed7d7;
+  color: #c53030;
+}
+
+.student-card__confirm-yes:hover {
+  background: #fc8181;
+  color: white;
+}
+
+.student-card__confirm-no {
+  background: #e2e8f0;
+  color: #4a5568;
+}
+
+.student-card__confirm-no:hover {
+  background: #cbd5e0;
+}
+
+/* === Create Form === */
+
+.student-select-screen__create-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.student-select-screen__input {
+  width: 100%;
+  font-size: 1.3rem;
+  padding: 0.85rem 1.25rem;
+  border: 3px solid #667eea;
+  border-radius: 16px;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: inherit;
+}
+
+.student-select-screen__input:focus {
+  border-color: #764ba2;
+  box-shadow: 0 0 0 4px rgba(118, 75, 162, 0.15);
+}
+
+.student-select-screen__input::placeholder {
+  color: #bbb;
+}
+
+.student-select-screen__form-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.student-select-screen__btn-confirm {
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.75rem 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  min-height: 48px;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.student-select-screen__btn-confirm:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: scale(1.03);
+}
+
+.student-select-screen__btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.student-select-screen__btn-cancel {
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.75rem 1.5rem;
+  background: #f0f0f0;
+  color: #666;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  min-height: 48px;
+  transition: background 0.2s;
+}
+
+.student-select-screen__btn-cancel:hover {
+  background: #e2e2e2;
+}
+
+/* === New Student Button === */
+
+.student-select-screen__btn-new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  min-height: 48px;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+}
+
+.student-select-screen__btn-new:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(102, 126, 234, 0.45);
+}
+
+.student-select-screen__btn-new:active {
+  transform: translateY(0);
+}
+
+/* === Header student name === */
+
+.header-student-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.9;
+  margin-right: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.header-btn--logout {
+  font-size: 1.2rem;
+  margin-left: 0.25rem;
+}

@@ -33,6 +33,7 @@ describe("persistence", () => {
         },
         totalAnswered: 15,
         totalCorrect: 12,
+        randomStats: { totalAnswered: 0, totalCorrect: 0 },
       };
 
       saveProgress(progress);

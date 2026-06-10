@@ -1,5 +1,6 @@
 import { ProgressProvider, useProgress } from "./context/ProgressContext";
 import { Header } from "./components/Header";
+import { StudentSelectScreen } from "./components/StudentSelectScreen";
 import { TableSelectionScreen } from "./components/TableSelectionScreen";
 import { PracticeScreen } from "./components/PracticeScreen";
 import { RandomPracticeScreen } from "./components/RandomPracticeScreen";
@@ -12,8 +13,9 @@ function AppContent() {
 
   return (
     <div className="app">
-      <Header />
+      {screen.type !== "student-select" && <Header />}
       <main className="app-main">
+        {screen.type === "student-select" && <StudentSelectScreen />}
         {screen.type === "selection" && <TableSelectionScreen />}
         {screen.type === "practice" && (
           <PracticeScreen tableNumber={screen.tableNumber} />

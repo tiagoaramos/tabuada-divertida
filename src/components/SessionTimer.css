@@ -1,0 +1,12 @@
+.session-timer {
+  text-align: center;
+  margin: 0.25rem 0 0.75rem;
+  color: var(--text-secondary, #666);
+  font-size: 0.9rem;
+}
+
+.session-timer__digits {
+  font-family: "Courier New", Courier, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}

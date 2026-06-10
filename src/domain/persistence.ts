@@ -1,14 +1,73 @@
-import type { Progress, StoredProgress, TableStats } from "../types";
+import type { Progress, StoredProgress, TableStats, Student } from "../types";
 import { calculateMasteryLevel } from "./stats";
 
 export const STORAGE_KEY = "math-trainer-progress";
+export const STUDENTS_KEY = "math-trainer-students";
+export const ACTIVE_STUDENT_KEY = "math-trainer-active-student";
+
+/**
+ * Retorna a chave de storage para um aluno específico.
+ */
+export function getStudentStorageKey(studentId: string): string {
+  return `${STORAGE_KEY}-${studentId}`;
+}
+
+/**
+ * Salva a lista de alunos no localStorage.
+ */
+export function saveStudents(students: Student[]): void {
+  localStorage.setItem(STUDENTS_KEY, JSON.stringify(students));
+}
+
+/**
+ * Carrega a lista de alunos do localStorage.
+ */
+export function loadStudents(): Student[] {
+  try {
+    const raw = localStorage.getItem(STUDENTS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (s: unknown) =>
+        s !== null &&
+        typeof s === "object" &&
+        typeof (s as Record<string, unknown>).id === "string" &&
+        typeof (s as Record<string, unknown>).name === "string"
+    );
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Salva o ID do aluno ativo no localStorage.
+ */
+export function saveActiveStudent(studentId: string): void {
+  localStorage.setItem(ACTIVE_STUDENT_KEY, studentId);
+}
+
+/**
+ * Carrega o ID do aluno ativo do localStorage.
+ */
+export function loadActiveStudent(): string | null {
+  return localStorage.getItem(ACTIVE_STUDENT_KEY);
+}
+
+/**
+ * Gera um ID único simples para um aluno.
+ */
+export function generateStudentId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
 
 /**
  * Salva o progresso no localStorage, convertendo Progress → StoredProgress.
  * Apenas totalAnswered e totalCorrect por tabuada são armazenados;
  * masteryLevel é recalculado ao carregar.
+ * Se studentId for fornecido, salva no storage individual do aluno.
  */
-export function saveProgress(progress: Progress): void {
+export function saveProgress(progress: Progress, studentId?: string): void {
   const stored: StoredProgress = {
     version: 1,
     unlockedTables: progress.unlockedTables,
@@ -20,16 +79,19 @@ export function saveProgress(progress: Progress): void {
     ),
     randomStats: progress.randomStats,
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+  const key = studentId ? getStudentStorageKey(studentId) : STORAGE_KEY;
+  localStorage.setItem(key, JSON.stringify(stored));
 }
 
 /**
  * Carrega o progresso do localStorage.
  * Retorna o estado padrão se dados ausentes, corrompidos ou inválidos.
+ * Se studentId for fornecido, carrega do storage individual do aluno.
  */
-export function loadProgress(): Progress {
+export function loadProgress(studentId?: string): Progress {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const key = studentId ? getStudentStorageKey(studentId) : STORAGE_KEY;
+    const raw = localStorage.getItem(key);
     if (!raw) return getDefaultProgress();
     const parsed = JSON.parse(raw) as StoredProgress;
     if (!isValidStoredProgress(parsed)) return getDefaultProgress();

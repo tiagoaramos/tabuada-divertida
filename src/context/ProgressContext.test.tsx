@@ -2,10 +2,21 @@ import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { ProgressProvider, useProgress } from "./ProgressContext";
 import type { ReactNode } from "react";
-import { STORAGE_KEY } from "../domain/persistence";
+import { STUDENTS_KEY, ACTIVE_STUDENT_KEY, getStudentStorageKey } from "../domain/persistence";
 
 function wrapper({ children }: { children: ReactNode }) {
   return <ProgressProvider>{children}</ProgressProvider>;
+}
+
+/**
+ * Configura um aluno ativo no localStorage para testes que precisam
+ * de um aluno logado.
+ */
+function setupActiveStudent(studentId = "test-student-1") {
+  const students = [{ id: studentId, name: "Aluno Teste", createdAt: "2025-01-01T00:00:00.000Z" }];
+  localStorage.setItem(STUDENTS_KEY, JSON.stringify(students));
+  localStorage.setItem(ACTIVE_STUDENT_KEY, studentId);
+  return studentId;
 }
 
 describe("ProgressContext", () => {
@@ -14,7 +25,7 @@ describe("ProgressContext", () => {
   });
 
   describe("initial state", () => {
-    it("loads default progress when localStorage is empty", () => {
+    it("shows student-select screen when no active student", () => {
       const { result } = renderHook(() => useProgress(), { wrapper });
 
       expect(result.current.progress).toEqual({
@@ -25,11 +36,26 @@ describe("ProgressContext", () => {
         randomStats: { totalAnswered: 0, totalCorrect: 0 },
       });
       expect(result.current.session).toBeNull();
-      expect(result.current.screen).toEqual({ type: "selection" });
+      expect(result.current.screen).toEqual({ type: "student-select" });
       expect(result.current.unlockCelebration).toBeNull();
     });
 
-    it("loads saved progress from localStorage", () => {
+    it("loads default progress when active student has no saved data", () => {
+      setupActiveStudent();
+      const { result } = renderHook(() => useProgress(), { wrapper });
+
+      expect(result.current.progress).toEqual({
+        unlockedTables: [2],
+        tableStats: {},
+        totalAnswered: 0,
+        totalCorrect: 0,
+        randomStats: { totalAnswered: 0, totalCorrect: 0 },
+      });
+      expect(result.current.screen).toEqual({ type: "selection" });
+    });
+
+    it("loads saved progress from localStorage for active student", () => {
+      const studentId = setupActiveStudent();
       const stored = {
         version: 1,
         unlockedTables: [2, 3],
@@ -37,7 +63,7 @@ describe("ProgressContext", () => {
           "2": { totalAnswered: 15, totalCorrect: 13 },
         },
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
+      localStorage.setItem(getStudentStorageKey(studentId), JSON.stringify(stored));
 
       const { result } = renderHook(() => useProgress(), { wrapper });
 
@@ -78,6 +104,7 @@ describe("ProgressContext", () => {
     });
 
     it("persists progress to localStorage after each answer", () => {
+      const studentId = setupActiveStudent();
       const { result } = renderHook(() => useProgress(), { wrapper });
       const question = { factorA: 2, factorB: 5, correctAnswer: 10 };
 
@@ -85,7 +112,7 @@ describe("ProgressContext", () => {
         result.current.submitAnswer(2, 10, question);
       });
 
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+      const stored = JSON.parse(localStorage.getItem(getStudentStorageKey(studentId))!);
       expect(stored.version).toBe(1);
       expect(stored.tableStats["2"].totalAnswered).toBe(1);
       expect(stored.tableStats["2"].totalCorrect).toBe(1);

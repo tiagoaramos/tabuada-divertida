@@ -30,6 +30,7 @@ describe("calculateOverallStats", () => {
       tableStats: {},
       totalAnswered: 0,
       totalCorrect: 0,
+      randomStats: { totalAnswered: 0, totalCorrect: 0 },
     };
 
     const result = calculateOverallStats(progress);
@@ -48,6 +49,7 @@ describe("calculateOverallStats", () => {
       },
       totalAnswered: 15,
       totalCorrect: 11,
+      randomStats: { totalAnswered: 0, totalCorrect: 0 },
     };
 
     const result = calculateOverallStats(progress);

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
-import type { Progress, PracticeSession, RandomPracticeSession, Screen, Question, TableStats } from "../types";
-import { loadProgress, saveProgress } from "../domain/persistence";
+import type { Progress, PracticeSession, RandomPracticeSession, Screen, Question, TableStats, Student } from "../types";
+import { loadProgress, saveProgress, loadStudents, saveStudents, loadActiveStudent, saveActiveStudent, generateStudentId, getDefaultProgress } from "../domain/persistence";
 import { evaluateAnswer } from "../domain/evaluation";
 import { shouldUnlockNext, getNextTableToUnlock } from "../domain/unlock";
 import { generateSessionQuestions, getNextQuestion, generateRandomSessionQuestions, getNextRandomQuestion } from "../domain/questions";
@@ -11,7 +11,9 @@ interface ProgressContextValue {
   session: PracticeSession | null;
   randomSession: RandomPracticeSession | null;
   screen: Screen;
-  unlockCelebration: number | null; // tableNumber that was just unlocked, or null
+  unlockCelebration: number | null;
+  currentStudent: Student | null;
+  students: Student[];
   submitAnswer: (tableNumber: number, answer: number, question: Question, skipUnlock?: boolean) => void;
   startSession: (tableNumber: number) => void;
   startRandomSession: () => void;
@@ -19,23 +21,106 @@ interface ProgressContextValue {
   advanceRandomSession: () => void;
   navigateTo: (screen: Screen) => void;
   dismissCelebration: () => void;
+  selectStudent: (student: Student) => void;
+  createStudent: (name: string) => void;
+  deleteStudent: (studentId: string) => void;
+  logout: () => void;
 }
 
 const ProgressContext = createContext<ProgressContextValue | null>(null);
 
 export function ProgressProvider({ children }: { children: ReactNode }) {
-  const [progress, setProgress] = useState<Progress>(() => loadProgress());
+  const [students, setStudents] = useState<Student[]>(() => loadStudents());
+  const [currentStudent, setCurrentStudent] = useState<Student | null>(() => {
+    const activeId = loadActiveStudent();
+    if (!activeId) return null;
+    const allStudents = loadStudents();
+    return allStudents.find((s) => s.id === activeId) ?? null;
+  });
+
+  const [progress, setProgress] = useState<Progress>(() => {
+    const activeId = loadActiveStudent();
+    if (activeId) return loadProgress(activeId);
+    return getDefaultProgress();
+  });
+
   const [session, setSession] = useState<PracticeSession | null>(null);
   const [randomSession, setRandomSession] = useState<RandomPracticeSession | null>(null);
-  const [screen, setScreen] = useState<Screen>({ type: "selection" });
+  const [screen, setScreen] = useState<Screen>(() => {
+    const activeId = loadActiveStudent();
+    if (activeId) {
+      const allStudents = loadStudents();
+      const found = allStudents.find((s) => s.id === activeId);
+      if (found) return { type: "selection" };
+    }
+    return { type: "student-select" };
+  });
   const [unlockCelebration, setUnlockCelebration] = useState<number | null>(null);
+
+  const selectStudent = useCallback((student: Student) => {
+    setCurrentStudent(student);
+    saveActiveStudent(student.id);
+    const studentProgress = loadProgress(student.id);
+    setProgress(studentProgress);
+    setScreen({ type: "selection" });
+    setSession(null);
+    setRandomSession(null);
+  }, []);
+
+  const createStudent = useCallback((name: string) => {
+    const newStudent: Student = {
+      id: generateStudentId(),
+      name: name.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    const updatedStudents = [...loadStudents(), newStudent];
+    saveStudents(updatedStudents);
+    setStudents(updatedStudents);
+    selectStudent(newStudent);
+  }, [selectStudent]);
+
+  const deleteStudent = useCallback((studentId: string) => {
+    const updatedStudents = loadStudents().filter((s) => s.id !== studentId);
+    saveStudents(updatedStudents);
+    setStudents(updatedStudents);
+    // Se deletou o aluno ativo, volta para tela de seleção de aluno
+    if (currentStudent?.id === studentId) {
+      setCurrentStudent(null);
+      setProgress(getDefaultProgress());
+      setScreen({ type: "student-select" });
+      localStorage.removeItem("math-trainer-active-student");
+    }
+  }, [currentStudent]);
+
+  const logout = useCallback(() => {
+    setCurrentStudent(null);
+    setProgress(getDefaultProgress());
+    setSession(null);
+    setRandomSession(null);
+    setScreen({ type: "student-select" });
+    localStorage.removeItem("math-trainer-active-student");
+  }, []);
 
   const submitAnswer = useCallback(
     (tableNumber: number, answer: number, question: Question, skipUnlock?: boolean) => {
       const isCorrect = evaluateAnswer(question, answer);
 
       setProgress((prev) => {
-        // Get or create table stats
+        if (skipUnlock) {
+          const updatedProgress: Progress = {
+            ...prev,
+            totalAnswered: prev.totalAnswered + 1,
+            totalCorrect: prev.totalCorrect + (isCorrect ? 1 : 0),
+            randomStats: {
+              totalAnswered: prev.randomStats.totalAnswered + 1,
+              totalCorrect: prev.randomStats.totalCorrect + (isCorrect ? 1 : 0),
+            },
+          };
+          const activeId = loadActiveStudent();
+          saveProgress(updatedProgress, activeId ?? undefined);
+          return updatedProgress;
+        }
+
         const currentStats: TableStats = prev.tableStats[tableNumber] ?? {
           tableNumber,
           totalAnswered: 0,
@@ -54,9 +139,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
           masteryLevel: newMasteryLevel,
         };
 
-        // Check for unlock (skip in random mode)
         let newUnlockedTables = prev.unlockedTables;
-        if (!skipUnlock && shouldUnlockNext(updatedTableStats)) {
+        if (shouldUnlockNext(updatedTableStats)) {
           const nextTable = getNextTableToUnlock(prev.unlockedTables);
           if (nextTable !== null && !prev.unlockedTables.includes(nextTable)) {
             newUnlockedTables = [...prev.unlockedTables, nextTable];
@@ -72,15 +156,11 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
           },
           totalAnswered: prev.totalAnswered + 1,
           totalCorrect: prev.totalCorrect + (isCorrect ? 1 : 0),
-          randomStats: skipUnlock
-            ? {
-                totalAnswered: prev.randomStats.totalAnswered + 1,
-                totalCorrect: prev.randomStats.totalCorrect + (isCorrect ? 1 : 0),
-              }
-            : prev.randomStats,
+          randomStats: prev.randomStats,
         };
 
-        saveProgress(updatedProgress);
+        const activeId = loadActiveStudent();
+        saveProgress(updatedProgress, activeId ?? undefined);
         return updatedProgress;
       });
     },
@@ -150,6 +230,8 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         randomSession,
         screen,
         unlockCelebration,
+        currentStudent,
+        students,
         submitAnswer,
         startSession,
         startRandomSession,
@@ -157,6 +239,10 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
         advanceRandomSession,
         navigateTo,
         dismissCelebration,
+        selectStudent,
+        createStudent,
+        deleteStudent,
+        logout,
       }}
     >
       {children}
