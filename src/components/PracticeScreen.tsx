@@ -113,6 +113,7 @@ export function PracticeScreen({ tableNumber }: PracticeScreenProps) {
           options={multipleChoiceOptions}
           onSelect={handleAnswer}
           disabled={feedbackState.type !== "none"}
+          questionKey={questionKey}
         />
       )}
 

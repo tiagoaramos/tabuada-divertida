@@ -106,6 +106,7 @@ export function RandomPracticeScreen() {
           options={multipleChoiceOptions}
           onSelect={handleAnswer}
           disabled={feedbackState.type !== "none"}
+          questionKey={questionKey}
         />
       )}
 

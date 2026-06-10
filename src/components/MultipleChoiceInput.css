@@ -19,11 +19,14 @@
   color: #333;
   cursor: pointer;
   transition: background 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.multiple-choice-btn:hover:not(:disabled) {
-  background: #e8f2fc;
-  transform: scale(1.03);
+@media (hover: hover) {
+  .multiple-choice-btn:hover:not(:disabled) {
+    background: #e8f2fc;
+    transform: scale(1.03);
+  }
 }
 
 .multiple-choice-btn:active:not(:disabled) {
